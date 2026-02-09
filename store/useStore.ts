@@ -78,35 +78,39 @@ export const useStore = create<AppState>()(
           
           const newHistory = { ...history, [today]: status };
 
-          // Streak Logic
-          let newStreak = streak;
+                    // Streak Logic: 
+                    // We increment streak ONLY if this is the FIRST pulse completed today 
+                    // AND the user completed at least one pulse yesterday (or streak is 0).
+                    let newStreak = streak || 0; // Safety fallback
+                    
+                    if (lastCompletedDate !== today) {
+                        // It's a new day. Did we keep the streak?
+                        if (lastCompletedDate) {
+                            const diff = differenceInCalendarDays(new Date(today), new Date(lastCompletedDate));
+                            if (diff === 1) {
+                                newStreak += 1;
+                            } else if (diff > 1) {
+                                newStreak = 1; // Reset
+                            }
+                        } else {
+                            newStreak = 1; // First ever
+                        }
+                    }
           
-          if (lastCompletedDate !== today) {
-              // It's a new day. Did we keep the streak?
-              if (lastCompletedDate) {
-                  const diff = differenceInCalendarDays(new Date(today), new Date(lastCompletedDate));
-                  if (diff === 1) {
-                      newStreak += 1;
-                  } else if (diff > 1) {
-                      newStreak = 1; // Reset
-                  }
-              } else {
-                  newStreak = 1; // First ever
-              }
-          }
-
-          // Ghost Evolution Logic
-          const newGhostLevel = Math.min(3, Math.floor(newStreak / 3) + 1);
-
-          set({ 
-              lastCompletedDate: today, 
-              dailyPulses: currentPulses,
-              history: newHistory,
-              streak: newStreak,
-              ghostLevel: newGhostLevel
-          });
-      },
-
+                    // Ghost Evolution Logic
+                    // Simple rule: Level up every 3 days of streak
+                    // Ensure level is between 1 and 3
+                    const rawLevel = Math.floor(newStreak / 3) + 1;
+                    const newGhostLevel = Math.max(1, Math.min(3, isNaN(rawLevel) ? 1 : rawLevel));
+          
+                    set({
+                        lastCompletedDate: today,
+                        dailyPulses: currentPulses,
+                        history: newHistory,
+                        streak: newStreak,
+                        ghostLevel: newGhostLevel
+                    });
+                },
       resetDailyProgress: () => set((state) => ({ 
           dailyPulses: INITIAL_PULSES, 
           lastCompletedDate: null,
